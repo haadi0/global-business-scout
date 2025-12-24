@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@/components/ui/GearIcon";
-import { MapPin, Globe, Hash, Search, AlertCircle } from "lucide-react";
+import { MapPin, Globe, Hash, Search, AlertCircle, Briefcase } from "lucide-react";
 import {
   countries,
   citiesByCountry,
@@ -16,10 +16,12 @@ import {
 interface ScrapeFormProps {
   country: string;
   city: string;
+  niche: string;
   limit: number;
   isLoading: boolean;
   onCountryChange: (value: string) => void;
   onCityChange: (value: string) => void;
+  onNicheChange: (value: string) => void;
   onLimitChange: (value: number) => void;
   onSubmit: () => void;
 }
@@ -27,10 +29,12 @@ interface ScrapeFormProps {
 export const ScrapeForm = ({
   country,
   city,
+  niche,
   limit,
   isLoading,
   onCountryChange,
   onCityChange,
+  onNicheChange,
   onLimitChange,
   onSubmit,
 }: ScrapeFormProps) => {
@@ -69,7 +73,7 @@ export const ScrapeForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!countryValid || !cityValid) return;
+    if (!countryValid || !cityValid || !niche.trim()) return;
     onSubmit();
   };
 
@@ -99,7 +103,7 @@ export const ScrapeForm = ({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Country Input */}
           <div className="space-y-2 relative" ref={countryRef}>
             <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -213,6 +217,23 @@ export const ScrapeForm = ({
             </AnimatePresence>
           </div>
 
+          {/* Niche Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Business Niche
+            </label>
+            <Input
+              type="text"
+              placeholder="e.g. Restaurants, Plumbers, Dentists"
+              value={niche}
+              onChange={(e) => onNicheChange(e.target.value)}
+              required
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">Type of businesses to scrape</p>
+          </div>
+
           {/* Limit Input */}
           <div className="space-y-2">
             <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -239,7 +260,7 @@ export const ScrapeForm = ({
           variant="copper"
           size="lg"
           className="w-full md:w-auto"
-          disabled={isLoading || !country || !city || !countryValid || !cityValid}
+          disabled={isLoading || !country || !city || !niche.trim() || !countryValid || !cityValid}
         >
           {isLoading ? (
             <div className="flex items-center gap-3">
