@@ -17,16 +17,17 @@ interface DashboardProps {
 export const Dashboard = ({ onLogout }: DashboardProps) => {
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
+  const [niche, setNiche] = useState("");
   const [limit, setLimit] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
   const [scrapedData, setScrapedData] = useState<BusinessData[]>([]);
   const { toast } = useToast();
 
   const handleScrape = async () => {
-    if (!country || !city) {
+    if (!country || !city || !niche.trim()) {
       toast({
         title: "Missing Parameters",
-        description: "Please enter both country and city to start scraping.",
+        description: "Please enter country, city, and business niche to start scraping.",
         variant: "destructive",
       });
       return;
@@ -36,7 +37,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     setScrapedData([]);
 
     try {
-      const result = await scrapeBusinessData(country, city, limit);
+      const result = await scrapeBusinessData(country, city, niche, limit);
 
       if (result.success) {
         setScrapedData(result.data);
@@ -130,10 +131,12 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
         <ScrapeForm
           country={country}
           city={city}
+          niche={niche}
           limit={limit}
           isLoading={isLoading}
           onCountryChange={setCountry}
           onCityChange={setCity}
+          onNicheChange={setNiche}
           onLimitChange={setLimit}
           onSubmit={handleScrape}
         />
@@ -158,7 +161,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
               Extracting Business Data...
             </p>
             <p className="text-muted-foreground font-mono text-sm mt-2">
-              Scraping {limit} records from {city}, {country}
+              Scraping {limit} {niche} records from {city}, {country}
             </p>
           </motion.div>
         )}
