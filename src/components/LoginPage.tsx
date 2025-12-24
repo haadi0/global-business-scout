@@ -3,27 +3,48 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GearIcon } from "@/components/ui/GearIcon";
-import { Lock, User, Eye, EyeOff } from "lucide-react";
+import { Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface LoginPageProps {
   onLogin: () => void;
 }
 
+const VALID_USERNAME = "admin";
+const VALID_PASSWORD = "adminadmin123";
+
 export const LoginPage = ({ onLogin }: LoginPageProps) => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
     
     // Simulate login delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     
-    setIsLoading(false);
-    onLogin();
+    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+      toast({
+        title: "Login Successful",
+        description: "Welcome to DataForge!",
+      });
+      setIsLoading(false);
+      onLogin();
+    } else {
+      setError("Invalid username or password. Please try again.");
+      setIsLoading(false);
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials. Please check your username and password.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -80,6 +101,18 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
             </p>
           </motion.div>
 
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2"
+            >
+              <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{error}</p>
+            </motion.div>
+          )}
+
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <motion.div
@@ -89,15 +122,18 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
               className="space-y-2"
             >
               <label className="text-sm font-display text-muted-foreground uppercase tracking-wider">
-                Email Address
+                Username
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  type="email"
-                  placeholder="operator@dataforge.io"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="admin"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setError("");
+                  }}
                   className="pl-12"
                   required
                 />
@@ -119,7 +155,10 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
                   className="pl-12 pr-12"
                   required
                 />
@@ -165,7 +204,7 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
             className="mt-8 text-center"
           >
             <p className="text-muted-foreground text-xs font-mono">
-              Demo Mode: Enter any credentials to proceed
+              Username: admin | Password: adminadmin123
             </p>
           </motion.div>
         </div>

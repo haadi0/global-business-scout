@@ -4,6 +4,7 @@ import { BusinessData } from "@/types/business";
 import { exportToExcel } from "@/utils/exportUtils";
 import { FileSpreadsheet, Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { GoogleSheetsGuide } from "@/components/GoogleSheetsGuide";
 
 interface ExportPanelProps {
   data: BusinessData[];
@@ -35,7 +36,7 @@ export const ExportPanel = ({ data, city, country }: ExportPanelProps) => {
       transition={{ duration: 0.5, delay: 0.1 }}
       className="industrial-panel rounded-xl p-6"
     >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
           <FileSpreadsheet className="h-6 w-6 text-copper" />
           <div>
@@ -49,6 +50,7 @@ export const ExportPanel = ({ data, city, country }: ExportPanelProps) => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
+          <GoogleSheetsGuide />
           <Button
             variant="mechanical"
             onClick={() => handleExport(false)}
@@ -68,14 +70,14 @@ export const ExportPanel = ({ data, city, country }: ExportPanelProps) => {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 text-xs font-mono text-muted-foreground">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-muted-foreground">
         <div className="p-3 bg-input rounded-lg border border-border">
-          <p className="font-display text-foreground mb-1">Basic Export</p>
-          <p>Name, Email, Category, Website</p>
+          <p className="font-display text-foreground mb-1 font-semibold">Basic Export</p>
+          <p>Name, Email, Description, Website</p>
         </div>
         <div className="p-3 bg-input rounded-lg border border-border">
-          <p className="font-display text-foreground mb-1">Full Export</p>
-          <p>All fields including social, rating, address</p>
+          <p className="font-display text-foreground mb-1 font-semibold">Full Export</p>
+          <p>All fields: Name, Email, Phone, Address, Social Media, Rating, Reviews, etc.</p>
         </div>
       </div>
     </motion.div>

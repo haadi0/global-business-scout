@@ -1,8 +1,17 @@
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@/components/ui/GearIcon";
-import { MapPin, Globe, Hash, Search } from "lucide-react";
+import { MapPin, Globe, Hash, Search, AlertCircle } from "lucide-react";
+import {
+  countries,
+  citiesByCountry,
+  getCountrySuggestions,
+  getCitySuggestions,
+  isValidCountry,
+  isValidCity,
+} from "@/data/locations";
 
 interface ScrapeFormProps {
   country: string;
@@ -25,9 +34,54 @@ export const ScrapeForm = ({
   onLimitChange,
   onSubmit,
 }: ScrapeFormProps) => {
+  const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [countrySuggestions, setCountrySuggestions] = useState<string[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  
+  const countryRef = useRef<HTMLDivElement>(null);
+  const cityRef = useRef<HTMLDivElement>(null);
+
+  const countryValid = isValidCountry(country);
+  const cityValid = isValidCity(city, country);
+  const hasCountryInList = countries.includes(country);
+
+  useEffect(() => {
+    setCountrySuggestions(getCountrySuggestions(country));
+  }, [country]);
+
+  useEffect(() => {
+    setCitySuggestions(getCitySuggestions(city, country));
+  }, [city, country]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
+        setShowCountrySuggestions(false);
+      }
+      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
+        setShowCitySuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!countryValid || !cityValid) return;
     onSubmit();
+  };
+
+  const selectCountry = (value: string) => {
+    onCountryChange(value);
+    onCityChange(""); // Reset city when country changes
+    setShowCountrySuggestions(false);
+  };
+
+  const selectCity = (value: string) => {
+    onCityChange(value);
+    setShowCitySuggestions(false);
   };
 
   return (
@@ -47,35 +101,116 @@ export const ScrapeForm = ({
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Country Input */}
-          <div className="space-y-2">
+          <div className="space-y-2 relative" ref={countryRef}>
             <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Country
             </label>
-            <Input
-              type="text"
-              placeholder="United States"
-              value={country}
-              onChange={(e) => onCountryChange(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="United States"
+                value={country}
+                onChange={(e) => onCountryChange(e.target.value)}
+                onFocus={() => setShowCountrySuggestions(true)}
+                className={`${!countryValid && country ? "border-destructive focus:ring-destructive" : ""}`}
+                required
+                disabled={isLoading}
+              />
+              {!countryValid && country && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                </div>
+              )}
+            </div>
+            {!countryValid && country && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Country not recognized. Please select from suggestions.
+              </p>
+            )}
+            
+            {/* Country Suggestions Dropdown */}
+            <AnimatePresence>
+              {showCountrySuggestions && countrySuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto"
+                >
+                  {countrySuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => selectCountry(suggestion)}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-copper/10 hover:text-copper transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* City Input */}
-          <div className="space-y-2">
+          <div className="space-y-2 relative" ref={cityRef}>
             <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               City
             </label>
-            <Input
-              type="text"
-              placeholder="New York"
-              value={city}
-              onChange={(e) => onCityChange(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="New York"
+                value={city}
+                onChange={(e) => onCityChange(e.target.value)}
+                onFocus={() => setShowCitySuggestions(true)}
+                className={`${!cityValid && city ? "border-destructive focus:ring-destructive" : ""}`}
+                required
+                disabled={isLoading}
+              />
+              {!cityValid && city && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                </div>
+              )}
+            </div>
+            {!cityValid && city && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                City not found for {country}. Check spelling or select from list.
+              </p>
+            )}
+            {hasCountryInList && citySuggestions.length === 0 && city && (
+              <p className="text-xs text-muted-foreground">
+                Custom city will be used for scraping.
+              </p>
+            )}
+            
+            {/* City Suggestions Dropdown */}
+            <AnimatePresence>
+              {showCitySuggestions && citySuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto"
+                >
+                  {citySuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => selectCity(suggestion)}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-copper/10 hover:text-copper transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Limit Input */}
@@ -94,6 +229,7 @@ export const ScrapeForm = ({
               required
               disabled={isLoading}
             />
+            <p className="text-xs text-muted-foreground">Max 500 records per scrape</p>
           </div>
         </div>
 
@@ -103,7 +239,7 @@ export const ScrapeForm = ({
           variant="copper"
           size="lg"
           className="w-full md:w-auto"
-          disabled={isLoading || !country || !city}
+          disabled={isLoading || !country || !city || !countryValid || !cityValid}
         >
           {isLoading ? (
             <div className="flex items-center gap-3">
