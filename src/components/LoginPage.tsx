@@ -10,8 +10,8 @@ interface LoginPageProps {
   onLogin: () => void;
 }
 
-const VALID_USERNAME = "admin";
-const VALID_PASSWORD = "adminadmin123";
+const VALID_USERNAME = "hadi";
+const VALID_PASSWORD = "adminhadi";
 
 export const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [username, setUsername] = useState("");
@@ -128,7 +128,7 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="admin"
+                  placeholder="hadi"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
@@ -204,7 +204,7 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
             className="mt-8 text-center"
           >
             <p className="text-muted-foreground text-xs font-mono">
-              Username: admin | Password: adminadmin123
+              Username: hadi | Password: adminhadi
             </p>
           </motion.div>
         </div>
