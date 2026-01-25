@@ -4,6 +4,7 @@ import { GearIcon } from "@/components/ui/GearIcon";
 import { ScrapeForm } from "@/components/ScrapeForm";
 import { DataTable } from "@/components/DataTable";
 import { ExportPanel } from "@/components/ExportPanel";
+import { UsageStats } from "@/components/UsageStats";
 import { BusinessData } from "@/types/business";
 import { scrapeBusinessData } from "@/services/scrapeService";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,8 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
   const [limit, setLimit] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
   const [scrapedData, setScrapedData] = useState<BusinessData[]>([]);
+  const [requestsUsed, setRequestsUsed] = useState(0);
+  const [bandwidthUsedMB, setBandwidthUsedMB] = useState(0);
   const { toast } = useToast();
 
   const handleScrape = async () => {
@@ -41,6 +44,9 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
 
       if (result.success) {
         setScrapedData(result.data);
+        // Track API usage (estimate ~0.5MB per request)
+        setRequestsUsed(prev => Math.min(prev + 1, 10));
+        setBandwidthUsedMB(prev => prev + (result.data.length * 0.02));
         toast({
           title: "Scraping Complete",
           description: result.message,
@@ -97,6 +103,8 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+        {/* API Usage Stats */}
+        <UsageStats requestsUsed={requestsUsed} bandwidthUsedMB={bandwidthUsedMB} />
         {/* Stats Bar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
