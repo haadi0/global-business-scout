@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@/components/ui/GearIcon";
-import { MapPin, Globe, Hash, Search, AlertCircle, Briefcase } from "lucide-react";
+import { MapPin, Globe, Hash, Search, AlertCircle, Briefcase, TrendingUp } from "lucide-react";
 import {
   countries,
   citiesByCountry,
@@ -12,6 +12,12 @@ import {
   isValidCountry,
   isValidCity,
 } from "@/data/locations";
+import { 
+  getNicheSuggestions, 
+  getCompetitionColor, 
+  getCompetitionLabel, 
+  NicheItem 
+} from "@/data/niches";
 
 interface ScrapeFormProps {
   country: string;
@@ -40,11 +46,14 @@ export const ScrapeForm = ({
 }: ScrapeFormProps) => {
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [showNicheSuggestions, setShowNicheSuggestions] = useState(false);
   const [countrySuggestions, setCountrySuggestions] = useState<string[]>([]);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [nicheSuggestions, setNicheSuggestions] = useState<NicheItem[]>([]);
   
   const countryRef = useRef<HTMLDivElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
+  const nicheRef = useRef<HTMLDivElement>(null);
 
   const countryValid = isValidCountry(country);
   const cityValid = isValidCity(city, country);
@@ -59,12 +68,19 @@ export const ScrapeForm = ({
   }, [city, country]);
 
   useEffect(() => {
+    setNicheSuggestions(getNicheSuggestions(niche));
+  }, [niche]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
         setShowCountrySuggestions(false);
       }
       if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
         setShowCitySuggestions(false);
+      }
+      if (nicheRef.current && !nicheRef.current.contains(e.target as Node)) {
+        setShowNicheSuggestions(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -86,6 +102,11 @@ export const ScrapeForm = ({
   const selectCity = (value: string) => {
     onCityChange(value);
     setShowCitySuggestions(false);
+  };
+
+  const selectNiche = (value: string) => {
+    onNicheChange(value);
+    setShowNicheSuggestions(false);
   };
 
   return (
@@ -218,7 +239,7 @@ export const ScrapeForm = ({
           </div>
 
           {/* Niche Input */}
-          <div className="space-y-2">
+          <div className="space-y-2 relative" ref={nicheRef}>
             <label className="text-sm font-display text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
               Business Niche
@@ -228,10 +249,40 @@ export const ScrapeForm = ({
               placeholder="e.g. Restaurants, Plumbers, Dentists"
               value={niche}
               onChange={(e) => onNicheChange(e.target.value)}
+              onFocus={() => setShowNicheSuggestions(true)}
               required
               disabled={isLoading}
             />
-            <p className="text-xs text-muted-foreground">Type of businesses to scrape</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              Select or type any business niche
+            </p>
+            
+            {/* Niche Suggestions Dropdown */}
+            <AnimatePresence>
+              {showNicheSuggestions && nicheSuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl max-h-72 overflow-y-auto"
+                >
+                  {nicheSuggestions.map((item) => (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => selectNiche(item.name)}
+                      className="w-full px-4 py-2.5 text-left text-sm hover:bg-copper/10 hover:text-copper transition-colors first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+                    >
+                      <span>{item.name}</span>
+                      <span className={`text-xs font-mono px-2 py-0.5 rounded ${getCompetitionColor(item.competition)}`}>
+                        {getCompetitionLabel(item.competition)}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Limit Input */}

@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { country, city, niche, limit } = await req.json();
+    const { country, city, niche, limit, offset = 0 } = await req.json();
 
     if (!country || !city || !niche) {
       return new Response(
@@ -32,11 +32,11 @@ serve(async (req) => {
 
     // Build search query
     const searchQuery = `${niche} in ${city}, ${country}`;
-    console.log('Searching for:', searchQuery);
+    console.log('Searching for:', searchQuery, 'offset:', offset);
 
-    // Call RapidAPI Google Maps Data endpoint
+    // Call RapidAPI Google Maps Data endpoint with offset for pagination
     const response = await fetch(
-      `https://maps-data.p.rapidapi.com/searchmaps.php?query=${encodeURIComponent(searchQuery)}&limit=${limit || 50}&lang=en&country=us`,
+      `https://maps-data.p.rapidapi.com/searchmaps.php?query=${encodeURIComponent(searchQuery)}&limit=${limit || 50}&offset=${offset}&lang=en&country=us`,
       {
         method: 'GET',
         headers: {
