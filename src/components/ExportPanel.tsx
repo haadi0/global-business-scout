@@ -10,9 +10,10 @@ interface ExportPanelProps {
   data: BusinessData[];
   city: string;
   country: string;
+  niche: string;
 }
 
-export const ExportPanel = ({ data, city, country }: ExportPanelProps) => {
+export const ExportPanel = ({ data, city, country, niche }: ExportPanelProps) => {
   const { toast } = useToast();
 
   if (data.length === 0) {
@@ -20,7 +21,8 @@ export const ExportPanel = ({ data, city, country }: ExportPanelProps) => {
   }
 
   const handleExport = (fullExport: boolean) => {
-    const filename = `${city}_${country}_business_data_${new Date().toISOString().split("T")[0]}`;
+    // Include niche in filename
+    const filename = `${niche}_${city}_${country}_${new Date().toISOString().split("T")[0]}`;
     exportToExcel(data, filename, fullExport);
     
     toast({

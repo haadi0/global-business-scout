@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { GearIcon } from "@/components/ui/GearIcon";
 import { ScrapeForm } from "@/components/ScrapeForm";
 import { DataTable } from "@/components/DataTable";
 import { ExportPanel } from "@/components/ExportPanel";
 import { UsageStats } from "@/components/UsageStats";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { BusinessData } from "@/types/business";
 import { scrapeBusinessData } from "@/services/scrapeService";
+import { 
+  fetchApiUsage, 
+  incrementApiUsage, 
+  saveScrapeHistory, 
+  findExistingScrape,
+  ScrapeHistoryItem 
+} from "@/services/sessionService";
 import { useToast } from "@/hooks/use-toast";
-import { Database, LogOut, Cog } from "lucide-react";
+import { Database, LogOut, Cog, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DashboardProps {
@@ -24,9 +32,42 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
   const [scrapedData, setScrapedData] = useState<BusinessData[]>([]);
   const [requestsUsed, setRequestsUsed] = useState(0);
   const [bandwidthUsedMB, setBandwidthUsedMB] = useState(0);
+  const [existingScrape, setExistingScrape] = useState<ScrapeHistoryItem | null>(null);
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
   const { toast } = useToast();
 
-  const handleScrape = async () => {
+  // Load API usage from database on mount
+  useEffect(() => {
+    const loadUsage = async () => {
+      try {
+        const usage = await fetchApiUsage();
+        setRequestsUsed(usage.requests_used);
+        setBandwidthUsedMB(usage.bandwidth_used_mb);
+      } catch (error) {
+        console.error('Failed to load API usage:', error);
+      }
+    };
+    loadUsage();
+  }, []);
+
+  // Check for existing scrape when inputs change
+  useEffect(() => {
+    const checkExisting = async () => {
+      if (country && city && niche) {
+        try {
+          const existing = await findExistingScrape(country, city, niche);
+          setExistingScrape(existing);
+        } catch (error) {
+          console.error('Failed to check existing scrape:', error);
+        }
+      } else {
+        setExistingScrape(null);
+      }
+    };
+    checkExisting();
+  }, [country, city, niche]);
+
+  const handleScrape = async (isContinue: boolean = false, offset: number = 0) => {
     if (!country || !city || !niche.trim()) {
       toast({
         title: "Missing Parameters",
@@ -37,19 +78,34 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     }
 
     setIsLoading(true);
-    setScrapedData([]);
+    if (!isContinue) {
+      setScrapedData([]);
+    }
 
     try {
-      const result = await scrapeBusinessData(country, city, niche, limit);
+      const result = await scrapeBusinessData(country, city, niche, limit, offset);
 
       if (result.success) {
-        setScrapedData(result.data);
-        // Track API usage (estimate ~0.5MB per request)
-        setRequestsUsed(prev => Math.min(prev + 1, 10));
-        setBandwidthUsedMB(prev => prev + (result.data.length * 0.02));
+        // Merge with existing data if continuing
+        const newData = isContinue && existingScrape 
+          ? [...existingScrape.data, ...result.data]
+          : result.data;
+        
+        setScrapedData(newData);
+        
+        // Update API usage in database
+        const bandwidthAdded = result.data.length * 0.02;
+        const updatedUsage = await incrementApiUsage(bandwidthAdded);
+        setRequestsUsed(updatedUsage.requests_used);
+        setBandwidthUsedMB(updatedUsage.bandwidth_used_mb);
+
+        // Save to history
+        await saveScrapeHistory(country, city, niche, newData, offset + result.data.length);
+        setHistoryRefreshTrigger(prev => prev + 1);
+
         toast({
-          title: "Scraping Complete",
-          description: result.message,
+          title: isContinue ? "Continue Scraping Complete" : "Scraping Complete",
+          description: `${result.data.length} new records scraped. Total: ${newData.length} records.`,
         });
       } else {
         toast({
@@ -67,6 +123,34 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleContinueScrape = () => {
+    if (existingScrape) {
+      handleScrape(true, existingScrape.last_offset);
+    }
+  };
+
+  const handleLoadHistory = (item: ScrapeHistoryItem) => {
+    setCountry(item.country);
+    setCity(item.city);
+    setNiche(item.niche);
+    setScrapedData(item.data);
+    toast({
+      title: "History Loaded",
+      description: `Loaded ${item.data.length} records from ${item.niche} in ${item.city}, ${item.country}`,
+    });
+  };
+
+  const handleContinueFromHistory = (item: ScrapeHistoryItem) => {
+    setCountry(item.country);
+    setCity(item.city);
+    setNiche(item.niche);
+    setScrapedData(item.data);
+    // Continue scraping from where it left off
+    setTimeout(() => {
+      handleScrape(true, item.last_offset);
+    }, 100);
   };
 
   return (
@@ -105,6 +189,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* API Usage Stats */}
         <UsageStats requestsUsed={requestsUsed} bandwidthUsedMB={bandwidthUsedMB} />
+        
         {/* Stats Bar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -135,6 +220,32 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           </div>
         </motion.div>
 
+        {/* Existing Scrape Notice */}
+        {existingScrape && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="industrial-panel rounded-xl p-4 border-2 border-copper/50"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-display font-bold text-foreground flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-copper" />
+                  Previous scrape found
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You have {existingScrape.total_scraped} records for "{niche}" in {city}, {country}. 
+                  Continue from where you left off?
+                </p>
+              </div>
+              <Button variant="copper" onClick={handleContinueScrape}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Continue Scraping
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Scrape Form */}
         <ScrapeForm
           country={country}
@@ -146,7 +257,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           onCityChange={setCity}
           onNicheChange={setNiche}
           onLimitChange={setLimit}
-          onSubmit={handleScrape}
+          onSubmit={() => handleScrape(false)}
         />
 
         {/* Loading Animation */}
@@ -174,8 +285,15 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           </motion.div>
         )}
 
+        {/* History Panel */}
+        <HistoryPanel 
+          onLoadHistory={handleLoadHistory}
+          onContinueScrape={handleContinueFromHistory}
+          refreshTrigger={historyRefreshTrigger}
+        />
+
         {/* Export Panel */}
-        {!isLoading && <ExportPanel data={scrapedData} city={city} country={country} />}
+        {!isLoading && <ExportPanel data={scrapedData} city={city} country={country} niche={niche} />}
 
         {/* Data Table */}
         {!isLoading && <DataTable data={scrapedData} />}

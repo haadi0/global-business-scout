@@ -5,11 +5,12 @@ export const scrapeBusinessData = async (
   country: string,
   city: string,
   niche: string,
-  limit: number
+  limit: number,
+  offset: number = 0
 ): Promise<{ success: boolean; data: BusinessData[]; message: string }> => {
   try {
     const { data, error } = await supabase.functions.invoke('scrape-businesses', {
-      body: { country, city, niche, limit },
+      body: { country, city, niche, limit, offset },
     });
 
     if (error) {

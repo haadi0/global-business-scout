@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_usage: {
+        Row: {
+          bandwidth_used_mb: number
+          created_at: string
+          id: string
+          last_reset_at: string
+          requests_used: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          bandwidth_used_mb?: number
+          created_at?: string
+          id?: string
+          last_reset_at?: string
+          requests_used?: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          bandwidth_used_mb?: number
+          created_at?: string
+          id?: string
+          last_reset_at?: string
+          requests_used?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scrape_history: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          data: Json
+          id: string
+          last_offset: number
+          niche: string
+          session_id: string
+          total_scraped: number
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          country: string
+          created_at?: string
+          data?: Json
+          id?: string
+          last_offset?: number
+          niche: string
+          session_id: string
+          total_scraped?: number
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          last_offset?: number
+          niche?: string
+          session_id?: string
+          total_scraped?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
