@@ -18,6 +18,8 @@ import {
   getCompetitionLabel, 
   NicheItem 
 } from "@/data/niches";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface ScrapeFormProps {
   country: string;
@@ -50,6 +52,7 @@ export const ScrapeForm = ({
   const [countrySuggestions, setCountrySuggestions] = useState<string[]>([]);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [nicheSuggestions, setNicheSuggestions] = useState<NicheItem[]>([]);
+  const [digitalServicesOnly, setDigitalServicesOnly] = useState(true);
   
   const countryRef = useRef<HTMLDivElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
@@ -68,8 +71,8 @@ export const ScrapeForm = ({
   }, [city, country]);
 
   useEffect(() => {
-    setNicheSuggestions(getNicheSuggestions(niche));
-  }, [niche]);
+    setNicheSuggestions(getNicheSuggestions(niche, digitalServicesOnly));
+  }, [niche, digitalServicesOnly]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -253,10 +256,23 @@ export const ScrapeForm = ({
               required
               disabled={isLoading}
             />
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              Select or type any business niche
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                {digitalServicesOnly ? "Showing niches needing digital services" : "All business niches"}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="digital-filter"
+                  checked={digitalServicesOnly}
+                  onCheckedChange={setDigitalServicesOnly}
+                  className="scale-75"
+                />
+                <Label htmlFor="digital-filter" className="text-xs text-muted-foreground cursor-pointer">
+                  Digital Needs
+                </Label>
+              </div>
+            </div>
             
             {/* Niche Suggestions Dropdown */}
             <AnimatePresence>

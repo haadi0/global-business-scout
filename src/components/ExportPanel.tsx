@@ -4,7 +4,7 @@ import { BusinessData } from "@/types/business";
 import { exportToExcel } from "@/utils/exportUtils";
 import { FileSpreadsheet, Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { GoogleSheetsGuide } from "@/components/GoogleSheetsGuide";
+import { GoogleSheetsConnect } from "@/components/GoogleSheetsConnect";
 
 interface ExportPanelProps {
   data: BusinessData[];
@@ -52,7 +52,7 @@ export const ExportPanel = ({ data, city, country, niche }: ExportPanelProps) =>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <GoogleSheetsGuide />
+          <GoogleSheetsConnect data={data} city={city} country={country} niche={niche} />
           <Button
             variant="mechanical"
             onClick={() => handleExport(false)}
