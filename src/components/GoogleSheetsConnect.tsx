@@ -15,12 +15,13 @@ import {
   Check,
   ExternalLink,
   Link2,
-  Plus,
   RefreshCw,
   Download,
   AlertCircle,
   CheckCircle2,
   Loader2,
+  Trash2,
+  Copy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BusinessData } from "@/types/business";
@@ -36,7 +37,7 @@ interface GoogleSheetsConnectProps {
 interface SheetInfo {
   id: string;
   name: string;
-  lastModified?: string;
+  lastUsed: string;
 }
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -44,124 +45,114 @@ type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheetsConnectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
+  const [spreadsheetInput, setSpreadsheetInput] = useState("");
   const [spreadsheetId, setSpreadsheetId] = useState("");
-  const [sheetName, setSheetName] = useState("Sheet1");
   const [isExporting, setIsExporting] = useState(false);
   const [savedSheets, setSavedSheets] = useState<SheetInfo[]>([]);
-  const [showNewSheet, setShowNewSheet] = useState(false);
-  const [newSheetName, setNewSheetName] = useState("");
   const { toast } = useToast();
 
-  // Load saved sheets from localStorage
+  // Load saved sheets
   useEffect(() => {
     const saved = localStorage.getItem("dataforge_google_sheets");
     if (saved) {
-      try {
-        setSavedSheets(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved sheets:", e);
-      }
+      try { setSavedSheets(JSON.parse(saved)); } catch {}
     }
   }, []);
 
-  // Save sheets to localStorage
-  const saveSheetToHistory = (sheet: SheetInfo) => {
+  const saveSheet = (sheet: SheetInfo) => {
     const updated = [sheet, ...savedSheets.filter(s => s.id !== sheet.id)].slice(0, 10);
     setSavedSheets(updated);
     localStorage.setItem("dataforge_google_sheets", JSON.stringify(updated));
   };
 
+  const removeSheet = (id: string) => {
+    const updated = savedSheets.filter(s => s.id !== id);
+    setSavedSheets(updated);
+    localStorage.setItem("dataforge_google_sheets", JSON.stringify(updated));
+  };
+
+  const extractId = (input: string): string => {
+    const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    return match ? match[1] : input.trim();
+  };
+
+  const handleInputChange = (value: string) => {
+    setSpreadsheetInput(value);
+    const id = extractId(value);
+    setSpreadsheetId(id);
+    setConnectionStatus("disconnected");
+  };
+
   const handleConnect = async () => {
-    if (!spreadsheetId.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a spreadsheet ID",
-        variant: "destructive",
-      });
+    if (!spreadsheetId) {
+      toast({ title: "Error", description: "Enter a spreadsheet URL or ID", variant: "destructive" });
       return;
     }
 
     setConnectionStatus("connecting");
-
     try {
-      // Test connection by calling the edge function
       const { data: result, error } = await supabase.functions.invoke("export-sheets", {
-        body: {
-          action: "test",
-          spreadsheetId: spreadsheetId.trim(),
-        },
+        body: { action: "test", spreadsheetId, niche, city },
       });
-
       if (error) throw error;
-
       if (result?.success) {
         setConnectionStatus("connected");
-        saveSheetToHistory({
-          id: spreadsheetId.trim(),
-          name: result.sheetName || `Sheet - ${city}`,
-          lastModified: new Date().toISOString(),
-        });
-        toast({
-          title: "Connected!",
-          description: "Successfully connected to Google Sheets",
-        });
+        const sheetName = `${niche || 'Data'} - ${city || 'Export'}`;
+        saveSheet({ id: spreadsheetId, name: sheetName, lastUsed: new Date().toISOString() });
+        toast({ title: "✓ Connected", description: "Ready to export data" });
       } else {
-        throw new Error(result?.error || "Failed to connect");
+        throw new Error(result?.error || "Connection failed");
       }
     } catch (error: any) {
       setConnectionStatus("error");
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Could not connect to the spreadsheet",
-        variant: "destructive",
-      });
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
     }
   };
 
+  const handleQuickConnect = (sheet: SheetInfo) => {
+    setSpreadsheetInput(sheet.id);
+    setSpreadsheetId(sheet.id);
+    setConnectionStatus("connected");
+    saveSheet({ ...sheet, lastUsed: new Date().toISOString() });
+    toast({ title: "✓ Connected", description: `Connected to ${sheet.name}` });
+  };
+
   const handleExport = async (fullExport: boolean) => {
-    if (!spreadsheetId.trim()) {
-      toast({
-        title: "Error",
-        description: "Please connect to a spreadsheet first",
-        variant: "destructive",
-      });
+    if (!spreadsheetId || connectionStatus !== "connected") {
+      toast({ title: "Not connected", description: "Connect to a sheet first", variant: "destructive" });
       return;
     }
-
     setIsExporting(true);
-
     try {
-      const exportData = data.map((item) => {
-        if (fullExport) {
-          return {
-            "Business Name": item.name,
-            "Email": item.email || "",
-            "Phone": item.phone || "",
-            "Website": item.website || "",
-            "Address": item.address || "",
-            "Category": item.category || "",
-            "Facebook": item.socialMedia?.facebook || "",
-            "Instagram": item.socialMedia?.instagram || "",
-            "Twitter": item.socialMedia?.twitter || "",
-            "LinkedIn": item.socialMedia?.linkedin || "",
-            "Rating": item.rating?.toString() || "",
-            "Reviews": item.reviews?.toString() || "",
-          };
-        } else {
-          return {
-            "Business Name": item.name,
-            "Email": item.email || "",
-            "Description": item.category || "",
-            "Website": item.website || "",
-          };
-        }
-      });
+      const exportData = data.map((item) =>
+        fullExport
+          ? {
+              "Business Name": item.name,
+              Email: item.email || "",
+              Phone: item.phone || "",
+              Website: item.website || "",
+              Address: item.address || "",
+              Category: item.category || "",
+              Facebook: item.socialMedia?.facebook || "",
+              Instagram: item.socialMedia?.instagram || "",
+              Twitter: item.socialMedia?.twitter || "",
+              LinkedIn: item.socialMedia?.linkedin || "",
+              Rating: item.rating?.toString() || "",
+              Reviews: item.reviews?.toString() || "",
+            }
+          : {
+              "Business Name": item.name,
+              Email: item.email || "",
+              Description: item.category || "",
+              Website: item.website || "",
+            }
+      );
 
       const { data: result, error } = await supabase.functions.invoke("export-sheets", {
         body: {
           action: "export",
-          spreadsheetId: spreadsheetId.trim(),
-          sheetName: sheetName || "Sheet1",
+          spreadsheetId,
+          sheetName: `${niche}_${city}`,
           data: exportData,
           niche,
           city,
@@ -170,64 +161,60 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
       });
 
       if (error) throw error;
-
       if (result?.success) {
+        // Copy CSV data to clipboard for easy paste
+        if (result.csvData) {
+          await navigator.clipboard.writeText(result.csvData);
+        }
         toast({
-          title: "Export Successful!",
-          description: `${data.length} records exported to Google Sheets`,
-        });
-        
-        saveSheetToHistory({
-          id: spreadsheetId.trim(),
-          name: `${niche} - ${city}`,
-          lastModified: new Date().toISOString(),
+          title: "Export Ready!",
+          description: `${data.length} records copied to clipboard. Open your sheet and paste (Ctrl+V).`,
         });
       } else {
         throw new Error(result?.error || "Export failed");
       }
     } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Could not export to Google Sheets",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsExporting(false);
     }
   };
 
-  const selectSheet = (sheet: SheetInfo) => {
-    setSpreadsheetId(sheet.id);
-    setConnectionStatus("disconnected");
-  };
+  const handleCopyData = async (fullExport: boolean) => {
+    const exportData = data.map((item) =>
+      fullExport
+        ? [item.name, item.email || "", item.phone || "", item.website || "", item.address || "", item.category || "", item.rating?.toString() || "", item.reviews?.toString() || ""].join("\t")
+        : [item.name, item.email || "", item.category || "", item.website || ""].join("\t")
+    );
+    const headers = fullExport
+      ? "Name\tEmail\tPhone\tWebsite\tAddress\tCategory\tRating\tReviews"
+      : "Name\tEmail\tDescription\tWebsite";
+    const tsvContent = [headers, ...exportData].join("\n");
 
-  const removeSheet = (sheetId: string) => {
-    const updated = savedSheets.filter(s => s.id !== sheetId);
-    setSavedSheets(updated);
-    localStorage.setItem("dataforge_google_sheets", JSON.stringify(updated));
-  };
-
-  const extractSpreadsheetId = (input: string): string => {
-    // Handle full URLs
-    const urlMatch = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    if (urlMatch) return urlMatch[1];
-    // Handle just the ID
-    return input.trim();
+    try {
+      await navigator.clipboard.writeText(tsvContent);
+      toast({
+        title: "Copied to Clipboard!",
+        description: `${data.length} records ready to paste into Google Sheets.`,
+      });
+    } catch {
+      toast({ title: "Copy failed", description: "Could not access clipboard", variant: "destructive" });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="flex items-center gap-2 border-copper/30 hover:border-copper hover:bg-copper/10"
           disabled={data.length === 0}
         >
           <FileSpreadsheet className="h-4 w-4 text-copper" />
-          <span>Export to Sheets</span>
+          <span>Google Sheets</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 font-display text-xl">
             <FileSpreadsheet className="h-6 w-6 text-copper" />
@@ -235,63 +222,37 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
           </DialogTitle>
         </DialogHeader>
 
-        <div className="mt-4 space-y-6">
-          {/* Connection Status */}
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-input border border-border">
-            {connectionStatus === "connected" ? (
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-            ) : connectionStatus === "connecting" ? (
-              <Loader2 className="h-5 w-5 text-copper animate-spin" />
-            ) : connectionStatus === "error" ? (
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            ) : (
-              <Link2 className="h-5 w-5 text-muted-foreground" />
-            )}
-            <div className="flex-1">
-              <p className="font-medium text-sm">
-                {connectionStatus === "connected" ? "Connected to Google Sheets" :
-                 connectionStatus === "connecting" ? "Connecting..." :
-                 connectionStatus === "error" ? "Connection Failed" :
-                 "Not Connected"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {connectionStatus === "connected" 
-                  ? `Ready to export ${data.length} records`
-                  : "Enter your spreadsheet ID to connect"
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Saved Sheets */}
+        <div className="mt-2 space-y-4">
+          {/* Quick Connect - Saved Sheets */}
           {savedSheets.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Recent Sheets</Label>
-              <div className="grid gap-2 max-h-32 overflow-y-auto">
+              <Label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Recent Sheets — Click to Connect</Label>
+              <div className="grid gap-1.5">
                 {savedSheets.map((sheet) => (
                   <div
                     key={sheet.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                      spreadsheetId === sheet.id 
-                        ? "border-copper bg-copper/10" 
-                        : "border-border hover:border-copper/50"
+                    className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                      spreadsheetId === sheet.id && connectionStatus === "connected"
+                        ? "border-green-500/50 bg-green-500/5"
+                        : "border-border hover:border-copper/50 hover:bg-copper/5"
                     }`}
-                    onClick={() => selectSheet(sheet)}
+                    onClick={() => handleQuickConnect(sheet)}
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileSpreadsheet className="h-4 w-4 text-copper flex-shrink-0" />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {spreadsheetId === sheet.id && connectionStatus === "connected" ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <FileSpreadsheet className="h-4 w-4 text-copper flex-shrink-0" />
+                      )}
                       <span className="text-sm truncate">{sheet.name}</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeSheet(sheet.id);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); removeSheet(sheet.id); }}
                     >
-                      ×
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
@@ -299,128 +260,118 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
             </div>
           )}
 
-          {/* Spreadsheet ID Input */}
+          {/* New Connection */}
           <div className="space-y-2">
-            <Label htmlFor="spreadsheetId" className="text-sm font-medium">
-              Spreadsheet ID or URL
+            <Label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              {savedSheets.length > 0 ? "Or Connect New Sheet" : "Connect Google Sheet"}
             </Label>
             <div className="flex gap-2">
               <Input
-                id="spreadsheetId"
-                value={spreadsheetId}
-                onChange={(e) => {
-                  setSpreadsheetId(extractSpreadsheetId(e.target.value));
-                  setConnectionStatus("disconnected");
-                }}
-                placeholder="Paste spreadsheet URL or ID..."
-                className="flex-1 font-mono text-sm"
+                value={spreadsheetInput}
+                onChange={(e) => handleInputChange(e.target.value)}
+                placeholder="Paste Google Sheets URL or ID..."
+                className="flex-1 font-mono text-xs"
               />
               <Button
-                variant="outline"
+                variant={connectionStatus === "connected" ? "outline" : "copper"}
+                size="sm"
                 onClick={handleConnect}
-                disabled={connectionStatus === "connecting" || !spreadsheetId.trim()}
-                className="flex-shrink-0"
+                disabled={connectionStatus === "connecting" || !spreadsheetId}
+                className="px-4"
               >
                 {connectionStatus === "connecting" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : connectionStatus === "connected" ? (
-                  <Check className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <Link2 className="h-4 w-4" />
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Paste the full URL or just the spreadsheet ID from Google Sheets
-            </p>
           </div>
 
-          {/* Sheet Name */}
-          <div className="space-y-2">
-            <Label htmlFor="sheetName" className="text-sm font-medium">
-              Sheet Tab Name
-            </Label>
-            <Input
-              id="sheetName"
-              value={sheetName}
-              onChange={(e) => setSheetName(e.target.value)}
-              placeholder="Sheet1"
-              className="font-mono text-sm"
-            />
+          {/* Status Bar */}
+          <div className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-mono ${
+            connectionStatus === "connected" ? "bg-green-500/10 text-green-600" :
+            connectionStatus === "error" ? "bg-red-500/10 text-red-500" :
+            "bg-muted text-muted-foreground"
+          }`}>
+            {connectionStatus === "connected" ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Connected — {data.length} records ready to export
+              </>
+            ) : connectionStatus === "error" ? (
+              <>
+                <AlertCircle className="h-3.5 w-3.5" />
+                Connection failed. Check your spreadsheet ID.
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                Enter spreadsheet URL to connect
+              </>
+            )}
           </div>
 
-          {/* Export Buttons */}
-          <AnimatePresence mode="wait">
+          {/* Export Actions */}
+          <AnimatePresence>
             {connectionStatus === "connected" && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-3"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3 overflow-hidden"
               >
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="mechanical"
+                    size="sm"
                     onClick={() => handleExport(false)}
                     disabled={isExporting}
-                    className="flex items-center gap-2"
                   >
-                    {isExporting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                     Basic Export
                   </Button>
                   <Button
                     variant="copper"
+                    size="sm"
                     onClick={() => handleExport(true)}
                     disabled={isExporting}
-                    className="flex items-center gap-2"
                   >
-                    {isExporting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                     Full Export
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
-                  <div className="p-2 bg-input rounded border border-border">
-                    <p className="font-semibold text-foreground mb-1">Basic</p>
-                    <p>Name, Email, Description, Website</p>
-                  </div>
-                  <div className="p-2 bg-input rounded border border-border">
-                    <p className="font-semibold text-foreground mb-1">Full</p>
-                    <p>All fields including social, rating, reviews</p>
-                  </div>
+                {/* One-Click Copy for pasting */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyData(false)}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copy Basic
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyData(true)}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copy Full
+                  </Button>
                 </div>
+
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Export prepares data → Open your Google Sheet → Paste with Ctrl+V
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Help Section */}
-          <div className="p-4 bg-brass/10 rounded-lg border border-brass/20">
-            <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-brass" />
-              Quick Setup
-            </h4>
-            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Create a new Google Sheet or open existing</li>
-              <li>Copy the spreadsheet URL from browser</li>
-              <li>Paste above and click connect</li>
-              <li>Choose Basic or Full export</li>
+          {/* Quick Help */}
+          <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">How it works:</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Open <a href="https://sheets.google.com" target="_blank" rel="noopener noreferrer" className="text-copper hover:underline">Google Sheets <ExternalLink className="h-2.5 w-2.5 inline" /></a> and create/open a sheet</li>
+              <li>Copy the URL from your browser</li>
+              <li>Paste it above and connect</li>
+              <li>Click Export or Copy, then paste into your sheet</li>
             </ol>
-            <a
-              href="https://sheets.google.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-copper hover:text-copper/80"
-            >
-              Open Google Sheets <ExternalLink className="h-3 w-3" />
-            </a>
           </div>
         </div>
       </DialogContent>

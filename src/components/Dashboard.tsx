@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { GearIcon } from "@/components/ui/GearIcon";
 import { ScrapeForm } from "@/components/ScrapeForm";
@@ -16,8 +16,9 @@ import {
   ScrapeHistoryItem 
 } from "@/services/sessionService";
 import { useToast } from "@/hooks/use-toast";
-import { Database, LogOut, Cog, RefreshCw } from "lucide-react";
+import { Database, LogOut, Cog, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -34,6 +35,13 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
   const [bandwidthUsedMB, setBandwidthUsedMB] = useState(0);
   const [existingScrape, setExistingScrape] = useState<ScrapeHistoryItem | null>(null);
   const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
+  
+  // Continuous scraping state
+  const [isContinuousScraping, setIsContinuousScraping] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [currentBatchSize] = useState(100); // Scrape in batches of 100
+  const abortRef = useRef(false);
+  
   const { toast } = useToast();
 
   // Load API usage from database on mount
@@ -67,6 +75,13 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     checkExisting();
   }, [country, city, niche]);
 
+  const updateUsageAfterBatch = useCallback(async (newDataCount: number) => {
+    const bandwidthAdded = newDataCount * 0.02;
+    const updatedUsage = await incrementApiUsage(bandwidthAdded);
+    setRequestsUsed(updatedUsage.requests_used);
+    setBandwidthUsedMB(updatedUsage.bandwidth_used_mb);
+  }, []);
+
   const handleScrape = async (isContinue: boolean = false, offset: number = 0) => {
     if (!country || !city || !niche.trim()) {
       toast({
@@ -78,6 +93,8 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     }
 
     setIsLoading(true);
+    abortRef.current = false;
+
     if (!isContinue) {
       setScrapedData([]);
     }
@@ -86,26 +103,18 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
       const result = await scrapeBusinessData(country, city, niche, limit, offset);
 
       if (result.success) {
-        // Merge with existing data if continuing
         const newData = isContinue && existingScrape 
           ? [...existingScrape.data, ...result.data]
           : result.data;
         
         setScrapedData(newData);
-        
-        // Update API usage in database
-        const bandwidthAdded = result.data.length * 0.02;
-        const updatedUsage = await incrementApiUsage(bandwidthAdded);
-        setRequestsUsed(updatedUsage.requests_used);
-        setBandwidthUsedMB(updatedUsage.bandwidth_used_mb);
-
-        // Save to history
+        await updateUsageAfterBatch(result.data.length);
         await saveScrapeHistory(country, city, niche, newData, offset + result.data.length);
         setHistoryRefreshTrigger(prev => prev + 1);
 
         toast({
           title: isContinue ? "Continue Scraping Complete" : "Scraping Complete",
-          description: `${result.data.length} new records scraped. Total: ${newData.length} records.`,
+          description: `${result.data.length} new records. Total: ${newData.length}.`,
         });
       } else {
         toast({
@@ -125,9 +134,111 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     }
   };
 
+  // Continuous batch scraping - scrapes in batches and updates UI in real-time
+  const handleContinuousScrape = async (totalTarget: number, startOffset: number = 0, existingData: BusinessData[] = []) => {
+    if (!country || !city || !niche.trim()) {
+      toast({
+        title: "Missing Parameters",
+        description: "Please enter country, city, and business niche.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsContinuousScraping(true);
+    setIsLoading(true);
+    abortRef.current = false;
+    setBatchProgress({ current: 0, total: totalTarget });
+    
+    let allData = [...existingData];
+    let currentOffset = startOffset;
+    let totalFetched = 0;
+
+    try {
+      while (totalFetched < totalTarget && !abortRef.current) {
+        const batchSize = Math.min(currentBatchSize, totalTarget - totalFetched);
+        
+        const result = await scrapeBusinessData(country, city, niche, batchSize, currentOffset);
+
+        if (!result.success) {
+          toast({
+            title: "Batch Failed",
+            description: `Stopped at ${totalFetched} records: ${result.message}`,
+            variant: "destructive",
+          });
+          break;
+        }
+
+        if (result.data.length === 0) {
+          toast({
+            title: "No More Results",
+            description: `All available data scraped. Total: ${allData.length} records.`,
+          });
+          break;
+        }
+
+        // Deduplicate and merge
+        const existingIds = new Set(allData.map(b => b.id));
+        const newRecords = result.data.filter(b => !existingIds.has(b.id));
+        allData = [...allData, ...newRecords];
+        
+        totalFetched += result.data.length;
+        currentOffset += result.data.length;
+
+        // Update UI in real-time
+        setScrapedData([...allData]);
+        setBatchProgress({ current: totalFetched, total: totalTarget });
+
+        // Save progress after each batch
+        await updateUsageAfterBatch(newRecords.length);
+        await saveScrapeHistory(country, city, niche, allData, currentOffset);
+        setHistoryRefreshTrigger(prev => prev + 1);
+
+        // Brief pause between batches
+        if (totalFetched < totalTarget && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (!abortRef.current) {
+        toast({
+          title: "Continuous Scraping Complete",
+          description: `Total: ${allData.length} records scraped successfully.`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Scraping interrupted. Progress has been saved.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsContinuousScraping(false);
+      setBatchProgress({ current: 0, total: 0 });
+    }
+  };
+
+  const handleStopScraping = () => {
+    abortRef.current = true;
+    toast({
+      title: "Stopping...",
+      description: "Finishing current batch. Progress is saved.",
+    });
+  };
+
   const handleContinueScrape = () => {
     if (existingScrape) {
-      handleScrape(true, existingScrape.last_offset);
+      handleContinuousScrape(limit, existingScrape.last_offset, existingScrape.data);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (limit > currentBatchSize) {
+      // For large requests, use continuous batching
+      handleContinuousScrape(limit);
+    } else {
+      handleScrape(false);
     }
   };
 
@@ -147,10 +258,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     setCity(item.city);
     setNiche(item.niche);
     setScrapedData(item.data);
-    // Continue scraping from where it left off
-    setTimeout(() => {
-      handleScrape(true, item.last_offset);
-    }, 100);
+    handleContinuousScrape(limit, item.last_offset, item.data);
   };
 
   return (
@@ -257,11 +365,59 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           onCityChange={setCity}
           onNicheChange={setNiche}
           onLimitChange={setLimit}
-          onSubmit={() => handleScrape(false)}
+          onSubmit={handleSubmit}
         />
 
-        {/* Loading Animation */}
-        {isLoading && (
+        {/* Continuous Scraping Progress */}
+        {isContinuousScraping && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="industrial-panel rounded-xl p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <GearIcon size={50} className="text-copper" speed={3} />
+                  <GearIcon 
+                    size={30} 
+                    className="text-brass absolute top-1/2 left-full -translate-y-1/2 -ml-2" 
+                    reverse 
+                    speed={4} 
+                  />
+                </div>
+                <div>
+                  <p className="font-display text-lg font-bold text-foreground">
+                    Continuous Scraping...
+                  </p>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    Batch processing {niche} in {city}, {country}
+                  </p>
+                </div>
+              </div>
+              <Button variant="destructive" size="sm" onClick={handleStopScraping}>
+                Stop
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-mono">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="text-foreground">{batchProgress.current} / {batchProgress.total}</span>
+              </div>
+              <Progress 
+                value={batchProgress.total > 0 ? (batchProgress.current / batchProgress.total) * 100 : 0} 
+                className="h-3"
+              />
+              <p className="text-xs text-muted-foreground font-mono text-center">
+                {scrapedData.length} total records collected • Data updates live below
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Simple Loading Animation (non-continuous) */}
+        {isLoading && !isContinuousScraping && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
