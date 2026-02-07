@@ -1,9 +1,11 @@
 import * as XLSX from "xlsx";
 import { BusinessData } from "@/types/business";
 
-export const exportToExcel = (data: BusinessData[], filename: string, fullExport: boolean = true) => {
+export type ExportMode = "full" | "basic" | "contact";
+
+export const exportToExcel = (data: BusinessData[], filename: string, mode: ExportMode = "full") => {
   const exportData = data.map((item) => {
-    if (fullExport) {
+    if (mode === "full") {
       return {
         "Business Name": item.name,
         "Email": item.email,
@@ -17,6 +19,12 @@ export const exportToExcel = (data: BusinessData[], filename: string, fullExport
         "LinkedIn": item.socialMedia.linkedin || "",
         "Rating": item.rating || "",
         "Reviews": item.reviews || "",
+      };
+    } else if (mode === "contact") {
+      return {
+        "Business Name": item.name,
+        "Phone": item.phone,
+        "Description": item.category,
       };
     } else {
       return {

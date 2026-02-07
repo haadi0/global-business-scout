@@ -95,26 +95,35 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     setIsLoading(true);
     abortRef.current = false;
 
-    if (!isContinue) {
-      setScrapedData([]);
-    }
-
     try {
+      // If continuing, load existing data first
+      let previousData: BusinessData[] = [];
+      if (isContinue) {
+        const existing = await findExistingScrape(country, city, niche);
+        if (existing) {
+          previousData = existing.data;
+          setScrapedData(previousData);
+        }
+      } else {
+        setScrapedData([]);
+      }
+
       const result = await scrapeBusinessData(country, city, niche, limit, offset);
 
       if (result.success) {
-        const newData = isContinue && existingScrape 
-          ? [...existingScrape.data, ...result.data]
-          : result.data;
+        // Deduplicate
+        const existingIds = new Set(previousData.map(b => b.id));
+        const newRecords = result.data.filter(b => !existingIds.has(b.id));
+        const mergedData = [...previousData, ...newRecords];
         
-        setScrapedData(newData);
-        await updateUsageAfterBatch(result.data.length);
-        await saveScrapeHistory(country, city, niche, newData, offset + result.data.length);
+        setScrapedData(mergedData);
+        await updateUsageAfterBatch(newRecords.length);
+        await saveScrapeHistory(country, city, niche, mergedData, offset + result.data.length);
         setHistoryRefreshTrigger(prev => prev + 1);
 
         toast({
           title: isContinue ? "Continue Scraping Complete" : "Scraping Complete",
-          description: `${result.data.length} new records. Total: ${newData.length}.`,
+          description: `${newRecords.length} new records. Total: ${mergedData.length}.`,
         });
       } else {
         toast({
@@ -233,12 +242,23 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
     }
   };
 
-  const handleSubmit = () => {
-    if (limit > currentBatchSize) {
-      // For large requests, use continuous batching
-      handleContinuousScrape(limit);
+  const handleSubmit = async () => {
+    // Always check for existing scrape and auto-resume from last offset
+    const existing = await findExistingScrape(country, city, niche);
+    if (existing && existing.data.length > 0) {
+      // Auto-resume from where we left off
+      if (limit > currentBatchSize) {
+        handleContinuousScrape(limit, existing.last_offset, existing.data);
+      } else {
+        handleScrape(true, existing.last_offset);
+      }
     } else {
-      handleScrape(false);
+      // Fresh scrape
+      if (limit > currentBatchSize) {
+        handleContinuousScrape(limit);
+      } else {
+        handleScrape(false);
+      }
     }
   };
 

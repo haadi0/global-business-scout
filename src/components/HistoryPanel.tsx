@@ -92,7 +92,7 @@ export const HistoryPanel = ({ onLoadHistory, onContinueScrape, refreshTrigger }
 
   const handleExport = (item: ScrapeHistoryItem) => {
     const filename = `${item.niche}_${item.city}_${item.country}_${new Date(item.created_at).toISOString().split("T")[0]}`;
-    exportToExcel(item.data, filename, true);
+    exportToExcel(item.data, filename, "full");
     toast({
       title: "Export Successful",
       description: `${item.data.length} records exported to ${filename}.xlsx`,
