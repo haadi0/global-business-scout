@@ -117,36 +117,46 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
     toast({ title: "✓ Connected", description: `Connected to ${sheet.name}` });
   };
 
-  const handleExport = async (fullExport: boolean) => {
+  type ExportMode = "full" | "basic" | "contact";
+
+  const handleExport = async (mode: ExportMode) => {
     if (!spreadsheetId || connectionStatus !== "connected") {
       toast({ title: "Not connected", description: "Connect to a sheet first", variant: "destructive" });
       return;
     }
     setIsExporting(true);
     try {
-      const exportData = data.map((item) =>
-        fullExport
-          ? {
-              "Business Name": item.name,
-              Email: item.email || "",
-              Phone: item.phone || "",
-              Website: item.website || "",
-              Address: item.address || "",
-              Category: item.category || "",
-              Facebook: item.socialMedia?.facebook || "",
-              Instagram: item.socialMedia?.instagram || "",
-              Twitter: item.socialMedia?.twitter || "",
-              LinkedIn: item.socialMedia?.linkedin || "",
-              Rating: item.rating?.toString() || "",
-              Reviews: item.reviews?.toString() || "",
-            }
-          : {
-              "Business Name": item.name,
-              Email: item.email || "",
-              Description: item.category || "",
-              Website: item.website || "",
-            }
-      );
+      const exportData = data.map((item) => {
+        if (mode === "full") {
+          return {
+            "Business Name": item.name,
+            Email: item.email || "",
+            Phone: item.phone || "",
+            Website: item.website || "",
+            Address: item.address || "",
+            Category: item.category || "",
+            Facebook: item.socialMedia?.facebook || "",
+            Instagram: item.socialMedia?.instagram || "",
+            Twitter: item.socialMedia?.twitter || "",
+            LinkedIn: item.socialMedia?.linkedin || "",
+            Rating: item.rating?.toString() || "",
+            Reviews: item.reviews?.toString() || "",
+          };
+        } else if (mode === "contact") {
+          return {
+            "Business Name": item.name,
+            Phone: item.phone || "",
+            Description: item.category || "",
+          };
+        } else {
+          return {
+            "Business Name": item.name,
+            Email: item.email || "",
+            Description: item.category || "",
+            Website: item.website || "",
+          };
+        }
+      });
 
       const { data: result, error } = await supabase.functions.invoke("export-sheets", {
         body: {
@@ -162,7 +172,6 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
 
       if (error) throw error;
       if (result?.success) {
-        // Copy CSV data to clipboard for easy paste
         if (result.csvData) {
           await navigator.clipboard.writeText(result.csvData);
         }
@@ -180,15 +189,21 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
     }
   };
 
-  const handleCopyData = async (fullExport: boolean) => {
-    const exportData = data.map((item) =>
-      fullExport
-        ? [item.name, item.email || "", item.phone || "", item.website || "", item.address || "", item.category || "", item.rating?.toString() || "", item.reviews?.toString() || ""].join("\t")
-        : [item.name, item.email || "", item.category || "", item.website || ""].join("\t")
-    );
-    const headers = fullExport
+  const handleCopyData = async (mode: ExportMode) => {
+    const exportData = data.map((item) => {
+      if (mode === "full") {
+        return [item.name, item.email || "", item.phone || "", item.website || "", item.address || "", item.category || "", item.rating?.toString() || "", item.reviews?.toString() || ""].join("\t");
+      } else if (mode === "contact") {
+        return [item.name, item.phone || "", item.category || ""].join("\t");
+      } else {
+        return [item.name, item.email || "", item.category || "", item.website || ""].join("\t");
+      }
+    });
+    const headers = mode === "full"
       ? "Name\tEmail\tPhone\tWebsite\tAddress\tCategory\tRating\tReviews"
-      : "Name\tEmail\tDescription\tWebsite";
+      : mode === "contact"
+        ? "Name\tPhone\tDescription"
+        : "Name\tEmail\tDescription\tWebsite";
     const tsvContent = [headers, ...exportData].join("\n");
 
     try {
@@ -323,34 +338,48 @@ export const GoogleSheetsConnect = ({ data, city, country, niche }: GoogleSheets
                 exit={{ opacity: 0, height: 0 }}
                 className="space-y-3 overflow-hidden"
               >
-                <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant="mechanical"
                     size="sm"
-                    onClick={() => handleExport(false)}
+                    onClick={() => handleExport("basic")}
                     disabled={isExporting}
                   >
                     {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-                    Basic Export
+                    Basic
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExport("contact")}
+                    disabled={isExporting}
+                    className="border-copper/30"
+                  >
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+                    Contact
                   </Button>
                   <Button
                     variant="copper"
                     size="sm"
-                    onClick={() => handleExport(true)}
+                    onClick={() => handleExport("full")}
                     disabled={isExporting}
                   >
                     {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-                    Full Export
+                    Full
                   </Button>
                 </div>
 
                 {/* One-Click Copy for pasting */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleCopyData(false)}>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyData("basic")}>
                     <Copy className="h-3.5 w-3.5 mr-1" />
                     Copy Basic
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleCopyData(true)}>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyData("contact")}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copy Contact
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyData("full")}>
                     <Copy className="h-3.5 w-3.5 mr-1" />
                     Copy Full
                   </Button>

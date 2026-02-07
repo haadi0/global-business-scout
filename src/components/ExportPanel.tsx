@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { BusinessData } from "@/types/business";
-import { exportToExcel } from "@/utils/exportUtils";
-import { FileSpreadsheet, Download, FileText } from "lucide-react";
+import { exportToExcel, ExportMode } from "@/utils/exportUtils";
+import { FileSpreadsheet, Download, FileText, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GoogleSheetsConnect } from "@/components/GoogleSheetsConnect";
 
@@ -20,10 +20,9 @@ export const ExportPanel = ({ data, city, country, niche }: ExportPanelProps) =>
     return null;
   }
 
-  const handleExport = (fullExport: boolean) => {
-    // Include niche in filename
+  const handleExport = (mode: ExportMode) => {
     const filename = `${niche}_${city}_${country}_${new Date().toISOString().split("T")[0]}`;
-    exportToExcel(data, filename, fullExport);
+    exportToExcel(data, filename, mode);
     
     toast({
       title: "Export Successful",
@@ -55,15 +54,23 @@ export const ExportPanel = ({ data, city, country, niche }: ExportPanelProps) =>
           <GoogleSheetsConnect data={data} city={city} country={country} niche={niche} />
           <Button
             variant="mechanical"
-            onClick={() => handleExport(false)}
+            onClick={() => handleExport("basic")}
             className="flex items-center gap-2"
           >
             <FileText className="h-4 w-4" />
             <span>Basic Export</span>
           </Button>
           <Button
+            variant="outline"
+            onClick={() => handleExport("contact")}
+            className="flex items-center gap-2 border-copper/30 hover:border-copper hover:bg-copper/10"
+          >
+            <Phone className="h-4 w-4" />
+            <span>Contact Export</span>
+          </Button>
+          <Button
             variant="copper"
-            onClick={() => handleExport(true)}
+            onClick={() => handleExport("full")}
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
@@ -72,10 +79,14 @@ export const ExportPanel = ({ data, city, country, niche }: ExportPanelProps) =>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-muted-foreground">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-muted-foreground">
         <div className="p-3 bg-input rounded-lg border border-border">
           <p className="font-display text-foreground mb-1 font-semibold">Basic Export</p>
           <p>Name, Email, Description, Website</p>
+        </div>
+        <div className="p-3 bg-input rounded-lg border border-border">
+          <p className="font-display text-foreground mb-1 font-semibold">Contact Export</p>
+          <p>Name, Phone, Description</p>
         </div>
         <div className="p-3 bg-input rounded-lg border border-border">
           <p className="font-display text-foreground mb-1 font-semibold">Full Export</p>
