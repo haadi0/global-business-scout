@@ -6,11 +6,12 @@ export const scrapeBusinessData = async (
   city: string,
   niche: string,
   limit: number,
-  offset: number = 0
+  offset: number = 0,
+  extractEmails: boolean = false
 ): Promise<{ success: boolean; data: BusinessData[]; message: string }> => {
   try {
     const { data, error } = await supabase.functions.invoke('scrape-businesses', {
-      body: { country, city, niche, limit, offset },
+      body: { country, city, niche, limit, offset, extractEmails },
     });
 
     if (error) {

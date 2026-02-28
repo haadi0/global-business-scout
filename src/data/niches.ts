@@ -272,6 +272,85 @@ export const businessNiches: NicheItem[] = [
   { name: "Eyewear & Optical Stores", competition: "low", needsDigitalServices: true, category: "Retail" },
   { name: "Supplement & Health Stores", competition: "low", needsDigitalServices: true, category: "Retail" },
   { name: "Antique & Collectibles Shops", competition: "low", needsDigitalServices: true, category: "Retail" },
+
+  // ===== FREELANCE DIGITAL SERVICES HIGH-POTENTIAL =====
+
+  // Coaching & Consulting (Need funnels, websites, booking, AI chatbots)
+  { name: "Life Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Business Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Career Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Executive Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Health & Wellness Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Relationship Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Sales Trainers", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Leadership Consultants", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Public Speaking Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+  { name: "Mindset & Productivity Coaches", competition: "low", needsDigitalServices: true, category: "Coaching & Consulting" },
+
+  // Creative & Media (Need portfolios, websites, SMM, branding)
+  { name: "Graphic Design Studios", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Interior Design Firms", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Architecture Firms", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Podcast Studios", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Recording Studios", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Video Production Companies", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Animation Studios", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Content Creation Agencies", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+  { name: "Voice Over Artists", competition: "low", needsDigitalServices: true, category: "Creative & Media" },
+
+  // E-commerce & Dropshipping (Need web stores, automation, ads)
+  { name: "Handmade Goods Sellers", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Print on Demand Shops", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Subscription Box Companies", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Artisan Food Producers", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Online Boutiques", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Candle & Soap Makers", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+  { name: "Custom Merch Stores", competition: "low", needsDigitalServices: true, category: "E-commerce" },
+
+  // Non-Profit & Community (Need websites, donation systems, SMM)
+  { name: "NGOs & Charities", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+  { name: "Community Centers", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+  { name: "Religious Organizations", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+  { name: "Youth Programs", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+  { name: "Animal Shelters & Rescues", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+  { name: "Environmental Organizations", competition: "low", needsDigitalServices: true, category: "Non-Profit" },
+
+  // Medical & Dental Specialists (Need patient portals, booking, websites)
+  { name: "Orthodontists", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Pediatric Clinics", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Plastic Surgery Clinics", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Fertility Clinics", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Urgent Care Centers", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Pain Management Clinics", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Sleep Clinics", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+  { name: "Hearing Aid Centers", competition: "low", needsDigitalServices: true, category: "Medical Specialists" },
+
+  // Financial & Insurance (Need lead gen, CRM, automation)
+  { name: "Mortgage Brokers", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+  { name: "Credit Repair Services", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+  { name: "Wealth Management Firms", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+  { name: "Crypto & Blockchain Consultants", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+  { name: "Debt Collection Agencies", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+  { name: "Payroll Services", competition: "low", needsDigitalServices: true, category: "Financial Services" },
+
+  // Trades & Skilled Labor (Need lead gen, websites, Google presence)
+  { name: "Welding Services", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Window Installation", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Fence Contractors", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Septic Tank Services", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Chimney Sweeps", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Drywall Contractors", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Tree Removal Services", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+  { name: "Appliance Repair Services", competition: "low", needsDigitalServices: true, category: "Skilled Trades" },
+
+  // SaaS & Startups (Need landing pages, MVPs, automation)
+  { name: "SaaS Startups", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "App Development Studios", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "AI & Machine Learning Companies", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "Biotech Startups", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "EdTech Companies", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "FinTech Companies", competition: "low", needsDigitalServices: true, category: "Startups" },
+  { name: "HealthTech Startups", competition: "low", needsDigitalServices: true, category: "Startups" },
 ];
 
 export const getCompetitionColor = (competition: CompetitionLevel): string => {
