@@ -31,6 +31,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
   const [limit, setLimit] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
   const [scrapedData, setScrapedData] = useState<BusinessData[]>([]);
+  const [extractEmails, setExtractEmails] = useState(false);
   const [requestsUsed, setRequestsUsed] = useState(0);
   const [bandwidthUsedMB, setBandwidthUsedMB] = useState(0);
   const [existingScrape, setExistingScrape] = useState<ScrapeHistoryItem | null>(null);
@@ -108,7 +109,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
         setScrapedData([]);
       }
 
-      const result = await scrapeBusinessData(country, city, niche, limit, offset);
+      const result = await scrapeBusinessData(country, city, niche, limit, offset, extractEmails);
 
       if (result.success) {
         // Deduplicate
@@ -167,7 +168,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
       while (totalFetched < totalTarget && !abortRef.current) {
         const batchSize = Math.min(currentBatchSize, totalTarget - totalFetched);
         
-        const result = await scrapeBusinessData(country, city, niche, batchSize, currentOffset);
+        const result = await scrapeBusinessData(country, city, niche, batchSize, currentOffset, extractEmails);
 
         if (!result.success) {
           toast({
@@ -381,10 +382,12 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           niche={niche}
           limit={limit}
           isLoading={isLoading}
+          extractEmails={extractEmails}
           onCountryChange={setCountry}
           onCityChange={setCity}
           onNicheChange={setNiche}
           onLimitChange={setLimit}
+          onExtractEmailsChange={setExtractEmails}
           onSubmit={handleSubmit}
         />
 

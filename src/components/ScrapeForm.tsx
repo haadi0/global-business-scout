@@ -27,10 +27,12 @@ interface ScrapeFormProps {
   niche: string;
   limit: number;
   isLoading: boolean;
+  extractEmails: boolean;
   onCountryChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onNicheChange: (value: string) => void;
   onLimitChange: (value: number) => void;
+  onExtractEmailsChange: (value: boolean) => void;
   onSubmit: () => void;
 }
 
@@ -40,10 +42,12 @@ export const ScrapeForm = ({
   niche,
   limit,
   isLoading,
+  extractEmails,
   onCountryChange,
   onCityChange,
   onNicheChange,
   onLimitChange,
+  onExtractEmailsChange,
   onSubmit,
 }: ScrapeFormProps) => {
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
@@ -317,7 +321,20 @@ export const ScrapeForm = ({
               required
               disabled={isLoading}
             />
-            <p className="text-xs text-muted-foreground">Max 500 records per scrape</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Max 500 records</p>
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="email-extraction"
+                  checked={extractEmails}
+                  onCheckedChange={onExtractEmailsChange}
+                  className="scale-75"
+                />
+                <Label htmlFor="email-extraction" className="text-xs text-muted-foreground cursor-pointer">
+                  Extract Emails
+                </Label>
+              </div>
+            </div>
           </div>
         </div>
 
