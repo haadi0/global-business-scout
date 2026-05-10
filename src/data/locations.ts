@@ -48,7 +48,12 @@ export const countries = [
   "Chile",
   "Colombia",
   "Peru",
-  "Venezuela"
+  "Venezuela",
+  "Tanzania",
+  "Uganda",
+  "Rwanda",
+  "Botswana",
+  "Namibia"
 ];
 
 export const citiesByCountry: Record<string, string[]> = {
@@ -101,7 +106,12 @@ export const citiesByCountry: Record<string, string[]> = {
   "Chile": ["Santiago", "Valparaíso", "Concepción", "La Serena", "Antofagasta", "Temuco", "Rancagua", "Talca", "Arica", "Chillán"],
   "Colombia": ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Bucaramanga", "Pereira", "Santa Marta", "Ibagué"],
   "Peru": ["Lima", "Arequipa", "Callao", "Trujillo", "Chiclayo", "Iquitos", "Huancayo", "Piura", "Chimbote", "Cusco"],
-  "Venezuela": ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "Ciudad Guayana", "Barcelona", "Maturín", "Petare", "Turmero"]
+  "Venezuela": ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "Ciudad Guayana", "Barcelona", "Maturín", "Petare", "Turmero"],
+  "Tanzania": ["Dar es Salaam", "Dodoma", "Mwanza", "Arusha", "Mbeya", "Morogoro", "Tanga", "Zanzibar City", "Kigoma", "Moshi", "Tabora", "Iringa", "Songea", "Musoma", "Bukoba"],
+  "Uganda": ["Kampala", "Wakiso", "Mukono", "Nansana", "Kira", "Ssabagabo", "Mbarara", "Mbale", "Jinja", "Masaka", "Entebbe", "Lira", "Gulu", "Soroti", "Kasese"],
+  "Rwanda": ["Kigali", "Butare", "Gitarama", "Ruhengeri", "Gisenyi", "Byumba", "Cyangugu", "Kibuye", "Kibungo", "Nyanza", "Rwamagana", "Musanze", "Huye", "Rubavu", "Muhanga"],
+  "Botswana": ["Gaborone", "Francistown", "Molepolole", "Maun", "Serowe", "Selibe Phikwe", "Kanye", "Mahalapye", "Mogoditshane", "Mochudi", "Lobatse", "Palapye", "Tlokweng", "Ramotswa", "Thamaga"],
+  "Namibia": ["Windhoek", "Walvis Bay", "Swakopmund", "Oshakati", "Rundu", "Rehoboth", "Katima Mulilo", "Otjiwarongo", "Okahandja", "Ondangwa", "Grootfontein", "Mariental", "Tsumeb", "Keetmanshoop", "Lüderitz"]
 };
 
 export const isValidCountry = (input: string): boolean => {
